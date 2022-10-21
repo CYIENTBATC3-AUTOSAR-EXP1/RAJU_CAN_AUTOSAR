@@ -2,9 +2,12 @@
  * File:   main.c
  * Author: rb65404
  *
- * Created on October 11, 2022, 4:49 PM
+ * Created on October 20, 2022, 11:25 AM
  */
 
+// PIC18F458 Configuration Bit Settings
+
+// 'C' source line config statements
 
 // CONFIG1H
 #pragma config OSC = HS         // Oscillator Selection bits (HS oscillator)
@@ -12,16 +15,16 @@
 
 // CONFIG2L
 #pragma config PWRT = OFF       // Power-up Timer Enable bit (PWRT disabled)
-#pragma config BOR = ON         // Brown-out Reset Enable bit (Brown-out Reset enabled)
+#pragma config BOR = OFF        // Brown-out Reset Enable bit (Brown-out Reset disabled)
 #pragma config BORV = 25        // Brown-out Reset Voltage bits (VBOR set to 2.5V)
 
 // CONFIG2H
-#pragma config WDT = ON         // Watchdog Timer Enable bit (WDT enabled)
+#pragma config WDT = OFF        // Watchdog Timer Enable bit (WDT disabled (control is placed on the SWDTEN bit))
 #pragma config WDTPS = 128      // Watchdog Timer Postscale Select bits (1:128)
 
 // CONFIG4L
-#pragma config STVR = ON        // Stack Full/Underflow Reset Enable bit (Stack Full/Underflow will cause Reset)
-#pragma config LVP = ON         // Low-Voltage ICSP Enable bit (Low-Voltage ICSP enabled)
+#pragma config STVR = OFF       // Stack Full/Underflow Reset Enable bit (Stack Full/Underflow will not cause Reset)
+#pragma config LVP = OFF        // Low-Voltage ICSP Enable bit (Low-Voltage ICSP disabled)
 
 // CONFIG5L
 #pragma config CP0 = OFF        // Code Protection bit (Block 0 (000200-001FFFh) not code protected)
@@ -57,63 +60,32 @@
 // Use project enums instead of #define for ON and OFF.
 
 #include <xc.h>
-void can_init()
-    {
-        TRISBbits.RB2=0;
-        TRISBbits.RB3=1;
-    }
-void set_baud_rate(int baud)
-{
-    CANCON=0x80;
-   while(!((CANSTAT & 0x80)==0x80)) 
+#include "driver.h"
+#include "CAN_IF.h"
+#include "AUTOSAR_COM_Config.h"
+
+/*
+ * Main Function Starts here 
+ */
+void main(void) {
+    
+   char data[8],buff[8]; /* declaring buffers */
+   int index=0;
+   for(index=0;index<8;index++)
    {
-       
-       if(baud == 250)
-       {
-           
-           BRGCON1 =0xC1;
-           BRGCON1 =0xAE;
-           BRGCON1 =0xA5;
-           CIOCON  =0X20;
-           CANCON  =0x08;
-           
-       }
+       data[index] = 0x60 + index;  /* defining buffers data */
+       buff[index] = 0x31 + index;
    }
-}
-
-    char can_send_msg(int type, int id, int *data)
-    {
-        
-        TXB0SIDH =(id >>5)&0XFF;
-        TXB0SIDL =(id <<3)&0XFF;
-        if(type)
-        {
-        
-        TXB0D0=data[0];
-        TXB0D1=data[1];
-        TXB0D2=data[2];
-        TXB0D3=data[3];
-        TXB0D4=data[4];
-        TXB0D5=data[5];
-        TXB0D6=data[6];
-        TXB0D7=data[7];
-       }
-    }
     
-void main(void) 
-{
+    sys_Init();                         /* System Initialization */
+    CAN_Init();                         /* CAN Initialization    */
+    //CAN_Baud_rate_set(BAUD_RATE_250);   /* CAN Baud Rate setting */
     
-    can_init();
-    set_baud_rate(250);
-    can_send_msg();
-    char data[8];
-    int index;
-    for(index=0; index<=7; index++)
-    {
-       data[index]=0x31+index;
-        CANCON=0X80;
+    /* While loop*/
+    for(;;){
+        __delay_ms(500);
+        CAN_FRAME(0,data);
+       // LED0 =~LED0;
     }
-
     return;
-}
-//}
+}   /* Main Function Ends here */
